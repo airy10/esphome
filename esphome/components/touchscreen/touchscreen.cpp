@@ -18,15 +18,8 @@ void Touchscreen::attach_interrupt_(InternalGPIOPin *irq_pin, esphome::gpio::Int
 
 void Touchscreen::call_setup() {
   if (this->display_ != nullptr) {
-    auto rotation = this->display_->get_rotation();
-    if ((rotation == 90) || (rotation == 270)) {
-          // Swap width and height
-          this->display_height_ = this->display_->get_width();
-          this->display_width_ = this->display_->get_height();
-    } else {
-          this->display_width_ = this->display_->get_width();
-          this->display_height_ = this->display_->get_height();
-    }
+    this->display_width_ = this->display_->get_width();
+    this->display_height_ = this->display_->get_height();
   }
   PollingComponent::call_setup();
 }
@@ -99,8 +92,17 @@ void Touchscreen::add_raw_touch_position_(uint8_t id, int16_t x_raw, int16_t y_r
   tp.y_raw = y_raw;
   tp.z_raw = z_raw;
   if (this->x_raw_max_ != this->x_raw_min_ and this->y_raw_max_ != this->y_raw_min_) {
-    x = this->normalize_(x_raw, this->x_raw_min_, this->x_raw_max_, this->invert_x_);
-    y = this->normalize_(y_raw, this->y_raw_min_, this->y_raw_max_, this->invert_y_);
+    auto x_raw_min = this->x_raw_min_;
+    auto x_raw_max = this->x_raw_max_;
+    auto y_raw_min = this->y_raw_min_;
+    auto y_raw_max = this->y_raw_max_;
+
+    if (this->swap_x_y_) {
+      std::swap(x_raw_max, y_raw_max);
+      std::swap(x_raw_min, y_raw_min);
+    }
+    x = this->normalize_(x_raw, x_raw_min, x_raw_max, this->invert_x_);
+    y = this->normalize_(y_raw, y_raw_min, y_raw_max, this->invert_y_);
 
     tp.x = (uint16_t) ((int) x * this->display_width_ / 0x1000);
     tp.y = (uint16_t) ((int) y * this->display_height_ / 0x1000);
